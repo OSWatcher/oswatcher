@@ -1,203 +1,122 @@
 # OSWatcher
 
-![](https://github.com/Wenzel/oswatcher/workflows/Capture%20Filesystem%20in%20git/badge.svg)
-[![Join the chat at https://gitter.im/oswatcher/Lobby](https://badges.gitter.im/trailofbits/algo.svg)](https://gitter.im/oswatcher/Lobby)
-[![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
-[![tokei](https://tokei.rs/b1/github/Wenzel/oswatcher)](https://github.com/Wenzel/oswatcher)
-[![repo size](https://img.shields.io/github/repo-size/Wenzel/oswatcher)](https://github.com/Wenzel/oswatcher)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-> Tracking the evolution of operating systems over time
+> A queryable graph of how operating systems change, release over release.
 
-## Table of Contents
+**This repository is the entry point to the OSWatcher project.** It contains no code. It explains what the project is, how the pieces fit together, and which repository to open next.
 
-- [Overview](#overview)
-- [Requirements](#requirements)
-- [Install](#install)
-- [Usage](#usage)
-- [Troubleshooting](#troubleshooting)
-- [Maintainers](#maintainers)
-- [Contributing](#contributing)
-- [License](#license)
+## What it is
 
-## Overview
+OSWatcher builds virtual machine images for historical operating system releases (Windows 95 through 11, Ubuntu 6.10 through 25.04), captures each image's filesystem and registry offline, and stores the result as a content-addressed Merkle graph in Neo4j, with file contents in S3-compatible object storage.
 
-OSWatcher is an ambitious project that aims to track the evolution of operating
-systems by making `diffs` between recognizable characteristics.
+The point is that operating system history becomes something you can **query** instead of something you have to re-derive from scratch every time. Which release first shipped this binary. Every image that ever contained this DLL. How a registry subtree drifted across a decade of service packs. What changed, byte for byte, between two Ubuntu LTS releases.
 
-The core of `OSWatcher` is to build a reference database about every OS
-releases, that is to be populated by an `extractor` in charge of capturing the
-various information that can be extracted from an installed operating system, both online
-and offline, in a reproducible way.
+The closest analogy is **git for golden images**, with the object graph living in a database rather than a packfile, so history can be traversed in any direction and enriched with your own extracted data.
 
-Offline:
+> **Not the Oracle tool.** If you are looking for OSWatcher Black Box (`oswbb`), Oracle's OS metrics collector for database diagnostics, that is an unrelated project. OSWatcher here is offline image analysis, not runtime monitoring.
 
-- filesystem hierarchy
-- setuid binaries
-- executable properties
-- library graph dependencies
-- statistics around `perl/sh/python` scripts
-- syscall tables
-- kernel configuration
-- cronjobs
-- `/etc` configuration
+## What you can ask it
 
-Online:
+Git content-addresses snapshots too, but its object graph is forward-only: a commit points at its files and never the reverse. Putting the same objects in a graph database makes three classes of question answerable in a single traversal:
 
-- IDLE memory consumption
-- default processes running
-- mapped libraries
-- listening ports and associated services
-- DNS requests sent
-- unix sockets
-- dbus traffic
-- iptables rules
-- loaded drivers
+- **Evolution** — how one file, symbol, struct or registry value changed across an OS's entire release history.
+- **Provenance** — given one artifact, every image that ever contained it.
+- **Commonality** — corpus-wide aggregates, such as which characteristics are most stable across a decade of releases.
 
-## Requirements
+## Start here
 
-- `python >= 3.7`
-- `virtualenv`
-- [`libguestfs`](http://libguestfs.org/)
-- [`Docker`](https://www.docker.com/) (_optional_)
+| If you want to... | Go to |
+|---|---|
+| Understand the core idea in ten minutes | [neogit: Why neogit?](https://github.com/OSWatcher/neogit/blob/master/docs/explanation/why-neogit.md) |
+| Run the full stack locally | [oswatcher-deploy](https://github.com/OSWatcher/oswatcher-deploy) (Docker Compose, six services) |
+| Snapshot and diff a filesystem, without the rest | [neogit](https://github.com/OSWatcher/neogit) (`pipx install neogit`) |
+| Capture your own OS images | [osw-builder](https://github.com/OSWatcher/osw-builder) (needs KVM, libvirt, Vagrant, Packer) |
+| Write an analysis plugin | [oswatcher-plugins](https://github.com/OSWatcher/oswatcher-plugins) |
+| Browse what has been captured | [windows-desktop](https://github.com/OSWatcher/windows-desktop), [ubuntu-server](https://github.com/OSWatcher/ubuntu-server) |
 
-## Install
+## How the pieces fit
 
-1. Clone repo and submodules
-~~~
-git clone https://github.com/Wenzel/oswatcher.git
-cd oswatcher
-git submodule update --init
-~~~
+```
+        ISO  /  cloud golden image  /  raw disk image
+                          │
+                          ▼
+              ┌───────────────────────┐
+              │      osw-builder      │  build VM with Packer, install updates,
+              │   (capture pipeline)  │  mount the disk offline via libguestfs
+              └───────────┬───────────┘
+                          │
+              ┌───────────┴───────────┐
+              ▼                       ▼
+     ┌─────────────────┐   ┌────────────────────────┐
+     │     neogit      │──▶│   oswatcher-plugins    │  extract symbols, parsed
+     │ Merkle snapshot │   │       (analysis)       │  structs, registry hives
+     └────────┬────────┘   └───────────┬────────────┘
+              │                        │
+              ▼                        ▼
+     ┌──────────────────────────────────────────────┐
+     │  Neo4j  — commits, trees, blobs, enrichment  │
+     │  + oswatcher-procedures (custom tree diff)   │
+     │  MinIO / S3 — file contents by SHA-1         │
+     └──────────────────────┬───────────────────────┘
+                            ▼
+              ┌───────────────────────────┐
+              │  graphql-api  →  frontend │
+              └───────────────────────────┘
+                            ▲
+              orchestrated by oswatcher-deploy
+```
 
-2. Install system dependencies
+## Repository map
 
-On `Ubuntu 18.04`
+**Core**
 
-~~~
-sudo apt-get install virtualenv python3-virtualenv libguestfs0 libguestfs-dev python3-guestfs python3-dev pkg-config libvirt-dev
-~~~
+| Repository | What it is |
+|---|---|
+| [neogit](https://github.com/OSWatcher/neogit) | Git-like content-addressed snapshots of a filesystem, backed by Neo4j and pluggable object storage. The foundation everything else builds on. |
+| [oswatcher-plugins](https://github.com/OSWatcher/oswatcher-plugins) | Capture and analysis plugins that enrich the graph with symbols, structs, registry data and more. |
+| [oswatcher-procedures](https://github.com/OSWatcher/oswatcher-procedures) | User-defined Neo4j procedures, chiefly recursive tree diffing, shipped as a JAR. |
 
-3. Create a `Python3` virtualenv
-~~~
-virtualenv --system-site-packages -p python3 venv
-source venv/bin/activate
-pip install .
-~~~
+**Capture**
 
-Note: We have to use `--system-site-packages` because `libguestfs` is not
-available on `pip`.
+| Repository | What it is |
+|---|---|
+| [osw-builder](https://github.com/OSWatcher/osw-builder) | The pipeline: ISO to booted VM to captured graph, with optional update chains. |
+| [packer-templates](https://github.com/OSWatcher/packer-templates) | Packer templates for the OS images osw-builder builds. |
+| [pywinupdate](https://github.com/OSWatcher/pywinupdate) | Automated Windows Update installation over WinRM, used when building update chains. |
 
-## VM setup
+**Serve**
 
-OSWatcher works on VMs stored in `libvirt`, either via `qemu:///session`
-or `qemu:///system`.
+| Repository | What it is |
+|---|---|
+| [oswatcher-deploy](https://github.com/OSWatcher/oswatcher-deploy) | Docker Compose stack tying everything together. The fastest way to see the system running. |
+| [graphql-api](https://github.com/OSWatcher/graphql-api) | GraphQL API over the graph. |
+| [frontend](https://github.com/OSWatcher/frontend) | Vue 3 web interface. |
 
-Note: `qemu:///session` is recommended as it requires less permission
-and should work without further configuration.
+**Data**
 
-## Example Usage: Filesystem capture in Git
+| Repository | What it is |
+|---|---|
+| [windows-desktop](https://github.com/OSWatcher/windows-desktop) | Inventory and analysis of captured Windows desktop releases. |
+| [ubuntu-server](https://github.com/OSWatcher/ubuntu-server) | Inventory and analysis of captured Ubuntu server releases. |
 
-### Hooks configuration
+## Status and known gaps
 
-Open `hooks.json` and edit `/path/to/repo` to an empty git repository (outside of `oswatcher`'s git repo).
+OSWatcher has been developed since 2016 and open-sourced in 2026. It is actively developed but **solo-maintained**, so APIs may change between releases and response times vary.
 
-~~~JSON
-        {
-            "name": "hooks.filesystem.GitFilesystemHook",
-            "configuration":
-            {
-                "repo": "/home/user/test/git_fs"
-            }
-        }
-~~~
+Two things worth knowing before you invest time:
 
-Start the capture tool on a `VM` and specify the hooks configuration to start
-capturing the VM's filesystem in the previously configured `git` repository.
+- **A fresh deployment starts with an empty graph.** Populating it currently means running `osw-builder` yourself, which needs KVM, libvirt, Vagrant, Packer, and your own installation media. A downloadable seed dataset is planned and not yet published.
+- **Some security controls ship disabled by default** in the open-source configuration, including blob download authentication and registry redaction. Review the deployment configuration before exposing an instance publicly.
 
-~~~
-(venv) $ oswatcher [options] <vm_name> hooks.json
-~~~
+## Contributing and security
 
-## Demo
+Issues and questions are welcome on this repository for anything cross-cutting, or on the specific repository for anything scoped to it. See [CONTRIBUTING](https://github.com/OSWatcher/.github/blob/main/CONTRIBUTING.md) and, for vulnerability reports, [SECURITY](https://github.com/OSWatcher/.github/blob/main/SECURITY.md).
 
-Capturing Windows XP Filesystem in a git repository ([high-quality](https://drive.google.com/open?id=15JF_Pr-kpCLkeHwaX_cfHUq744BZwsNo))
+## History
 
-![Capturing winxp
-filesystem](https://user-images.githubusercontent.com/964610/78451333-923d5b80-7674-11ea-854d-37a53bd7d3ae.gif)
-
-## Advanced Usage
-
-### Neo4j
-
-Some of `OSWatcher`'s plugins are using `neo4j` as a database.
-- `system.OperatingSystemHook`
-- `filesystem.Neo4jFilesystemHook`
-- `security.SecurityHook`
-
-Follow the instructions in the `db` directory to run a `Neo4j` inside a docker
-container.
-
-Modify your `hooks.json` to include a `neo4j` dictionary in the general `configuration` section.
-
-You will also need to include the:
-- `OperatingSystemHook` at least.
-
-The rest is optional. 
-
-To visualize the filesystem in `Neo4j`, include the `FilesystemHook` and the `Neo4jFilesystemHook`, like the example below:
-~~~JSON
-{
-    "configuration":
-    {
-        "neo4j": {
-            "enabled": true,
-            "delete": false,
-            "replace": false
-        },
-        "desktop_ready_delay": 90
-    },
-    "hooks":
-    [
-        {
-            "name": "hooks.filesystem.LibguestfsHook"
-        },
-        {
-            "name": "hooks.filesystem.FilesystemHook",
-            "configuration":
-            {
-                "enumerate": true,
-                "log_progress": true,
-                "log_progress_delay": 10
-            }
-        },
-        {
-            "name": "hooks.filesystem.Neo4jFilesystemHook"
-        }
-    ]
-}
-
-~~~
-
-Access `Neo4j` web interface at `http://localhost:7474` ![ubuntu etc
-neo4j](https://user-images.githubusercontent.com/964610/47535864-18714200-d8c6-11e8-885b-27d17c8d6235.png)
-
-## Troubleshooting
-
-### libguestfs
-
-If `libguestfs` fails to initialize, you can use the `libguestfs-test-tool` to
-quickly understand the root cause of the failure.
-
-## Maintainers
-
-[@Wenzel](https://github.com/Wenzel)
-
-## Contributing
-
-PRs accepted.
-
-Small note: If editing the Readme, please conform to the [standard-readme](https://github.com/RichardLitt/standard-readme) specification.
+This repository began in 2016 as the original single-repo OSWatcher framework and kept that history through the 2026 move to the current multi-repository architecture. The original implementation is preserved at the [`v0-legacy`](https://github.com/OSWatcher/oswatcher/tree/v0-legacy) tag.
 
 ## License
 
-[GNU General Public License v3.0](https://github.com/Wenzel/oswatcher/blob/master/LICENSE)
+[Apache 2.0](LICENSE)
