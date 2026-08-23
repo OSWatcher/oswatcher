@@ -37,16 +37,49 @@ Git content-addresses snapshots too, but its object graph is forward-only: a com
 
 ## Getting started
 
-The deployment stack is the entry point. Clone it, bring it up, then fill the graph.
+The deployment stack is the entry point. It runs in two modes:
+
+- **Development** builds the API, frontend and Neo4j procedures from local checkouts. Nothing to
+  authenticate against, so this is the mode to evaluate or hack on the project.
+- **Production** pulls pre-built images and expects a domain and real credentials. See
+  [oswatcher-deploy](https://github.com/OSWatcher/oswatcher-deploy) for that path.
+
+To bring up the development stack, clone the deploy repo **and the three components it builds from,
+as siblings**:
 
 ```bash
 git clone https://github.com/OSWatcher/oswatcher-deploy
+git clone https://github.com/OSWatcher/graphql-api
+git clone https://github.com/OSWatcher/frontend
+git clone https://github.com/OSWatcher/oswatcher-procedures
+
 cd oswatcher-deploy
 cp .env.example .env
-docker compose up -d
+docker compose -f compose.yml -f compose.dev.yml up -d --build
 ```
 
-That gives you Neo4j, MinIO, the GraphQL API, the web frontend and Traefik, with an empty graph.
+Note the two `-f` flags. `compose.yml` is a base layer and is not runnable on its own; it needs
+either the `dev` or the `prod` overlay.
+
+That gives you Neo4j, MinIO, the GraphQL API, the web frontend and Traefik, with an empty graph:
+
+| Service | URL |
+|---|---|
+| Frontend | <http://localhost:5173> |
+| GraphQL API | <http://localhost:4000/graphql> |
+| Neo4j browser | <http://localhost:7474> |
+| MinIO console | <http://localhost:9001> |
+
+Check it is alive:
+
+```bash
+curl -s -X POST http://localhost:4000/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ branches { name } }"}'
+# {"data":{"branches":[]}}
+```
+
+An empty `branches` list is the expected answer on a fresh deployment.
 
 Filling it is the second step, and it is the point of the project. There is deliberately no corpus
 to download. [osw-builder](https://github.com/OSWatcher/osw-builder) ships the recipes to rebuild
