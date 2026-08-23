@@ -29,11 +29,43 @@ Git content-addresses snapshots too, but its object graph is forward-only: a com
 | If you want to... | Go to |
 |---|---|
 | Understand the core idea in ten minutes | [neogit: Why neogit?](https://github.com/OSWatcher/neogit/blob/master/docs/explanation/why-neogit.md) |
-| Run the full stack locally | [oswatcher-deploy](https://github.com/OSWatcher/oswatcher-deploy) (Docker Compose, six services) |
+| Run the full stack locally | [Getting started](#getting-started), then [oswatcher-deploy](https://github.com/OSWatcher/oswatcher-deploy) (Docker Compose, six services) |
 | Snapshot and diff a filesystem, without the rest | [neogit](https://github.com/OSWatcher/neogit) (`pipx install neogit`) |
 | Capture your own OS images | [osw-builder](https://github.com/OSWatcher/osw-builder) (needs KVM, libvirt, Vagrant, Packer) |
 | Write an analysis plugin | [oswatcher-plugins](https://github.com/OSWatcher/oswatcher-plugins) |
 | Browse what has been captured | [windows-desktop](https://github.com/OSWatcher/windows-desktop), [ubuntu-server](https://github.com/OSWatcher/ubuntu-server) |
+
+## Getting started
+
+The deployment stack is the entry point. Clone it, bring it up, then fill the graph.
+
+```bash
+git clone https://github.com/OSWatcher/oswatcher-deploy
+cd oswatcher-deploy
+cp .env.example .env
+docker compose up -d
+```
+
+That gives you Neo4j, MinIO, the GraphQL API, the web frontend and Traefik, with an empty graph.
+
+Filling it is the second step, and it is the point of the project. There is deliberately no corpus
+to download. [osw-builder](https://github.com/OSWatcher/osw-builder) ships the recipes to rebuild
+the history yourself, release by release, and commit each one into the graph:
+
+```bash
+osw-builder capture_os win10-22h2-19045.2006
+osw-builder capture_os ubuntu-22.04
+```
+
+Each capture builds the VM with Packer, installs the updates in order, mounts the resulting disk
+offline with libguestfs, and writes a commit. Run a series and you have the timeline. Because you
+build it from installation media rather than downloading someone else's database, you control the
+editions, the update chain and the exact builds you care about, and you can verify every step.
+
+This is the expensive path by design: it needs KVM, libvirt, Vagrant, Packer and your own
+installation media, and a single Windows capture wants the ISO plus room for the VM disk, so budget
+tens of gigabytes per release. See [osw-builder](https://github.com/OSWatcher/osw-builder) for the
+full prerequisites.
 
 ## How the pieces fit
 
@@ -106,7 +138,7 @@ OSWatcher has been developed since 2016 and open-sourced in 2026. It is actively
 
 Two things worth knowing before you invest time:
 
-- **A fresh deployment starts with an empty graph.** Populating it currently means running `osw-builder` yourself, which needs KVM, libvirt, Vagrant, Packer, and your own installation media. A downloadable seed dataset is planned and not yet published.
+- **A fresh deployment starts with an empty graph, and you fill it yourself.** This is a design decision, not a missing feature: `osw-builder` ships the recipes to rebuild the Windows and Ubuntu history from installation media and commit it into the graph. It does mean the first useful result is hours away, not minutes, and it needs KVM, libvirt, Vagrant, Packer and your own media. See [Getting started](#getting-started).
 - **Some security controls ship disabled by default** in the open-source configuration, including blob download authentication and registry redaction. Review the deployment configuration before exposing an instance publicly.
 
 ## Contributing and security
