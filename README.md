@@ -33,7 +33,7 @@ Git content-addresses snapshots too, but its object graph is forward-only: a com
 | Snapshot and diff a filesystem, without the rest | [neogit](https://github.com/OSWatcher/neogit) (`pipx install neogit`) |
 | Capture your own OS images | [osw-builder](https://github.com/OSWatcher/osw-builder) (needs KVM, libvirt, Vagrant, Packer) |
 | Write an analysis plugin | [oswatcher-plugins](https://github.com/OSWatcher/oswatcher-plugins) |
-| Browse what has been captured | [windows-desktop](https://github.com/OSWatcher/windows-desktop), [ubuntu-server](https://github.com/OSWatcher/ubuntu-server) |
+| Build the corpus and query it | [Getting started](#getting-started) |
 
 ## Getting started
 
@@ -125,12 +125,18 @@ full prerequisites.
 | [graphql-api](https://github.com/OSWatcher/graphql-api) | GraphQL API over the graph. |
 | [frontend](https://github.com/OSWatcher/frontend) | Vue 3 web interface. |
 
-**Data**
+**Archived datasets (legacy)**
+
+These come from the original 2016-2020 OSWatcher, which committed captured filesystems straight
+into git. They are frozen, read-only, and not part of the current toolchain, which builds the
+corpus into Neo4j instead (see [Getting started](#getting-started)). Coverage stops in 2020-2021,
+so a file missing from them is not evidence it was never shipped.
 
 | Repository | What it is |
 |---|---|
-| [windows-desktop](https://github.com/OSWatcher/windows-desktop) | Inventory and analysis of captured Windows desktop releases. |
-| [ubuntu-server](https://github.com/OSWatcher/ubuntu-server) | Inventory and analysis of captured Ubuntu server releases. |
+| [windows-desktop](https://github.com/OSWatcher/windows-desktop) | Windows desktop captures, Windows 10 1507 to 20H2. Archived. |
+| [ubuntu-server](https://github.com/OSWatcher/ubuntu-server) | Ubuntu server captures, 12.04 to 18.04. Archived. |
+| [osw-fs-windows](https://github.com/OSWatcher/osw-fs-windows) | Windows filesystem paths, Windows 98 to Windows 10 20H1. Archived. |
 
 ## Status and known gaps
 
