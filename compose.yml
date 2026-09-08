@@ -22,11 +22,30 @@ services:
       - procedure_plugin:/plugins
     tmpfs:
       - /var/lib/neo4j/run
+    depends_on:
+      db-seed:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "neo4j", "status"]
       interval: 1m
       timeout: 10s
       retries: 3
+
+  # On first `up -d`, download a published Neo4j corpus dump and load it into the
+  # neo4j_data volume, so the stack starts with a ready-to-use graph. Idempotent:
+  # a marker file on the volume records the loaded version. Disable by setting
+  # SEED_DB=false or leaving SEED_DB_URL empty. See scripts/db-seed.sh.
+  db-seed:
+    image: neo4j:${NEO4J_VERSION}
+    entrypoint: ["bash", "/db-seed.sh"]
+    environment:
+      SEED_DB: ${SEED_DB:-true}
+      SEED_DB_URL: ${SEED_DB_URL:-}
+      SEED_DB_VERSION: ${SEED_DB_VERSION:-}
+    volumes:
+      - neo4j_data:/data
+      - db_seed_cache:/seed
+      - ./scripts/db-seed.sh:/db-seed.sh:ro
 
   minio:
     image: minio/minio:${MINIO_VERSION}
@@ -102,3 +121,4 @@ volumes:
   neo4j_data:
   minio_data:
   procedure_plugin:
+  db_seed_cache:

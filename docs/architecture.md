@@ -34,11 +34,12 @@ OSWatcher is a pipeline. An OS image goes in at one end; a queryable graph comes
 
 ## The deployment stack
 
-`docker compose up -d` in this repository brings up six services:
+`docker compose up -d` in this repository brings up the following services:
 
 | Service | Image | Role |
 |---------|-------|------|
 | **Neo4j** | `neo4j` + APOC | Graph database holding OS snapshots as Merkle trees |
+| **db-seed** | `neo4j` | On first boot, downloads the ready-to-use corpus dump from `SEED_DB_URL` and loads it into the `neo4j_data` volume before the database starts. Idempotent, and skipped when `SEED_DB=false`. See [building-a-corpus.md](building-a-corpus.md) |
 | **procedure-init** | `ghcr.io/oswatcher/oswatcher-procedures` | Installs the [custom Neo4j diff procedures](https://github.com/OSWatcher/oswatcher-procedures) JAR into Neo4j's plugin volume before the database starts |
 | **MinIO** | `minio/minio` | S3-compatible object storage for file blobs |
 | **minio-init** | `minio/mc` | Creates the read-only blob-download user and sets the bucket policy |

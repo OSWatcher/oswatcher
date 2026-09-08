@@ -18,6 +18,7 @@ expose an instance, edit `.env`:
 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | non-default credentials (the production overlay refuses to start with the default password) |
 | `NEO4J_AUTH` | `neo4j/<strong-password>`, and set `NEO4J_USER` / `NEO4J_PASSWORD` to match |
 | `NEO4J_HEAP_INITIAL_SIZE`, `NEO4J_HEAP_MAX_SIZE`, `NEO4J_PAGECACHE_SIZE` | size for your corpus; the committed values suit local evaluation only |
+| `SEED_DB` | `false` if you will restore your own backup or build your own corpus; leave `true` to bootstrap the server from the published dump on first `up -d` |
 
 Then:
 
