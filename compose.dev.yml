@@ -1,0 +1,52 @@
+services:
+  procedure-builder:
+    build:
+      context: ../oswatcher-procedures
+    volumes:
+      - procedure_plugin:/plugin
+
+  neo4j:
+    depends_on:
+      procedure-builder:
+        condition: service_completed_successfully
+    environment:
+      NEO4J_apoc_export_file_enabled: "true"  # Enable APOC export to files
+      NEO4J_db_logs_query_enabled: "VERBOSE"
+      NEO4J_db_logs_query_parameter__logging__enabled: "true"
+      NEO4J_db_logs_query_transaction_enabled: "VERBOSE"
+  api:
+    build:
+      context: ../graphql-api
+    environment:
+      DEBUG: ${NEO4J_GRAPHQL_DEBUG_LVL}
+      DIFF_DATE_LIMIT_YEAR: 2030
+    labels:
+      - "traefik.http.routers.api.rule=Host(`api.localhost`)"
+
+  traefik:
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--providers.file.filename=/dynamic.yml"
+      - "--log.level=INFO"
+    volumes:
+      - "./certs/dev.yml:/dynamic.yml"
+      - "./certs:/certs"
+
+  frontend:
+    depends_on:
+      - api
+    build:
+      context: ../frontend
+      args:
+        NODE_ENV: "development"
+    # http://api is a container-internal name the browser cannot resolve. The
+    # bundle keeps its placeholder and the entrypoint substitutes this value at
+    # container start, so point it at the API's published host port.
+    environment:
+      VITE_OSWATCHER_API_URI: "http://localhost:4000/"
+    ports:
+      - "5173:8080"

@@ -1,0 +1,14 @@
+- name: Install Ansible Galaxy dependencies
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Install required Ansible Galaxy roles
+      ansible.builtin.command: ansible-galaxy install -r requirements.yml --force
+      args:
+        chdir: "{{ playbook_dir }}"
+
+- name: OSWatcher deployment
+  hosts: all
+
+  roles:
+    - runner
