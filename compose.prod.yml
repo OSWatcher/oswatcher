@@ -1,0 +1,89 @@
+services:
+  procedure-init:
+    image: ghcr.io/oswatcher/oswatcher-procedures:latest
+    pull_policy: always
+    volumes:
+      - procedure_plugin:/plugin
+
+  neo4j:
+    restart: unless-stopped
+    depends_on:
+      procedure-init:
+        condition: service_completed_successfully
+    environment:
+      # Existing server defaults; the committed .env supplies smaller local values.
+      NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP_INITIAL_SIZE:-4600m}
+      NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP_MAX_SIZE:-4600m}
+      NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE_SIZE:-4g}
+      # It is also recommended turning out-of-memory errors into full crashes,
+      # instead of allowing a partially crashed database to continue running:
+      NEO4J_server_jvm_additional: "-XX:+ExitOnOutOfMemoryError"
+
+  # Fail-safe: prevent default password in production
+  minio-security-check:
+    image: alpine:latest
+    command: |
+      sh -c '
+        if [ "$$MINIO_ROOT_PASSWORD" = "minioadmin" ]; then
+          echo "ERROR: Default MinIO password detected in production! Change MINIO_ROOT_PASSWORD"
+          exit 1
+        fi
+        echo "MinIO password security check passed"
+      '
+    environment:
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+
+  minio:
+    depends_on:
+      minio-security-check:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      # Fail-safe: require password to be set, prevents accidental insecure startup
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`storage.${DOMAIN:?DOMAIN must be set}`)"
+      - "traefik.http.routers.minio.entrypoints=${HTTP_SCHEME:-https}"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
+
+  api:
+    image: ghcr.io/oswatcher/graphql-api:latest
+    pull_policy: always
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.${DOMAIN:?DOMAIN must be set}`)"
+      - "traefik.http.routers.api.entrypoints=${HTTP_SCHEME:-https}"
+      - "traefik.http.services.api.loadbalancer.server.port=4000"
+
+  frontend:
+    image: ghcr.io/oswatcher/frontend:latest
+    pull_policy: always
+    # The image is built with a placeholder API URI; its entrypoint substitutes
+    # this value into the bundle at container start, so no rebuild is needed to
+    # point a deployment at a different API.
+    environment:
+      VITE_OSWATCHER_API_URI: "${HTTP_SCHEME:-https}://api.${DOMAIN:?DOMAIN must be set}"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:?DOMAIN must be set}`)"
+      - "traefik.http.routers.frontend.entrypoints=${HTTP_SCHEME:-https}"
+      - "traefik.http.services.frontend.loadbalancer.server.port=8080"
+
+  traefik:
+    depends_on:
+      - frontend
+    restart: unless-stopped
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--entrypoints.http.address=:80"
+      - "--entrypoints.https.address=:443"
+      - "--entrypoints.https.http.tls=true"
+      - "--log.level=INFO"
+
+volumes:

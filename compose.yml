@@ -1,0 +1,104 @@
+services:
+  neo4j:
+    image: neo4j:${NEO4J_VERSION}
+    environment:
+      NEO4J_AUTH: ${NEO4J_AUTH}
+      NEO4J_PLUGINS: '["apoc"]'
+      # https://neo4j.com/docs/operations-manual/current/configuration/configuration-settings/#config_server.memory.heap.max_size
+      # NEO4J_server_memory_heap_max__size: ${HEAP_MAXSIZE}
+      # https://neo4j.com/docs/operations-manual/current/configuration/configuration-settings/#config_dbms.memory.transaction.total.max
+      # 0: unlimited
+      NEO4J_dbms_memory_transaction_total_max: 0
+      # avoid 'neo4j is already running' issues - use tmpfs instead of /run
+      # https://github.com/neo4j/neo4j/issues/12908#issuecomment-1643308694
+      # https://neo4j.com/docs/operations-manual/current/configuration/configuration-settings/#config_server.bolt.thread_pool_max_size
+      # increase default thread pool size to avoid starvation
+      NEO4J_server_bolt_thread__pool__max__size: 800
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:7474:7474" # HTTP
+      - "${BIND_ADDRESS:-0.0.0.0}:7687:7687" # Bolt
+    volumes:
+      - neo4j_data:/data
+      - procedure_plugin:/plugins
+    tmpfs:
+      - /var/lib/neo4j/run
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+
+  minio:
+    image: minio/minio:${MINIO_VERSION}
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:9000:9000" # S3 API
+      - "${BIND_ADDRESS:-0.0.0.0}:9001:9001" # Web console
+    volumes:
+      - minio_data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.entrypoints=websecure"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 1m
+      timeout: 20s
+      retries: 3
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./scripts/minio-init-users.sh:/minio-init-users.sh:ro
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
+    entrypoint: /bin/sh
+    command: /minio-init-users.sh
+
+  api:
+    depends_on:
+      neo4j:
+        condition: service_started
+      minio:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:4000:4000"
+    environment:
+      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      NEO4J_URI: "bolt://neo4j:7687"
+      OBJECT_STORAGE_URI: "http://minio:9000"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.services.api.loadbalancer.server.port=4000"
+
+  traefik:
+    depends_on:
+      - api
+      - minio
+    image: traefik:${TRAEFIK_VERSION}
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:80:80"
+      - "${BIND_ADDRESS:-0.0.0.0}:443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+volumes:
+  neo4j_data:
+  minio_data:
+  procedure_plugin:

@@ -1,0 +1,6 @@
+github_account: OSWatcher
+github_repo: osw-builder
+runner_user: "{{ ansible_env.USER }}"
+runner_base_dir: "/home/{{ ansible_env.USER }}/runners"
+runner_state: "started"
+runner_count: 20

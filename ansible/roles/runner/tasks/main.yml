@@ -1,0 +1,7 @@
+- name: Import monolithprojects.github_actions_runner
+  include_role:
+    name: monolithprojects.github_actions_runner
+  vars:
+    runner_dir: "{{ runner_base_dir }}/runner_{{ item }}"
+    runner_name: "builder-{{ item }}"
+  with_sequence: start=1 end={{ runner_count }}

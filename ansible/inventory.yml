@@ -1,0 +1,4 @@
+# Replace with the host where the runners should be deployed
+ungrouped:
+  hosts:
+    runners.example.com:
