@@ -19,6 +19,7 @@ SEED_DB_VERSION="${SEED_DB_VERSION:-}"
 DATA_DB="/data/databases/neo4j"
 MARKER="/data/.oswatcher-seed-version"
 DUMP="/seed/neo4j.dump"
+DUMP_VERSION="/seed/.dump-version"
 
 log() { echo "[db-seed] $*"; }
 
@@ -38,8 +39,19 @@ if [ -d "$DATA_DB" ] && [ -n "$(ls -A "$DATA_DB" 2>/dev/null)" ] && [ ! -f "$MAR
     exit 0
 fi
 
-log "downloading corpus dump from $SEED_DB_URL"
 mkdir -p /seed
+
+# `wget -c` resumes a partial download when this container is restarted
+# mid-transfer. A cached file from a *different* SEED_DB_VERSION must not be
+# resumed though, so drop it when the cached version tag does not match. The tag
+# is written before the download, so retries within the same version still resume.
+if [ -f "$DUMP" ] && [ "$(cat "$DUMP_VERSION" 2>/dev/null || true)" != "$SEED_DB_VERSION" ]; then
+    log "cached download is for a different version; discarding it"
+    rm -f "$DUMP"
+fi
+echo "$SEED_DB_VERSION" > "$DUMP_VERSION"
+
+log "downloading corpus dump from $SEED_DB_URL"
 wget -c --tries=5 --retry-connrefused --waitretry=10 -O "$DUMP" "$SEED_DB_URL"
 
 log "loading dump into database 'neo4j' (this can take a few minutes)"
