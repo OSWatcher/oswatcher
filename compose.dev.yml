@@ -36,6 +36,23 @@ services:
       - "./certs/dev.yml:/dynamic.yml"
       - "./certs:/certs"
 
+  mcp:
+    depends_on:
+      - api
+    build:
+      context: ../graphql-api
+      dockerfile: mcp/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      GRAPHQL_API_URL: "http://api:4000/graphql"
+      MCP_PORT: "3001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mcp.rule=Host(`mcp.localhost`)"
+      - "traefik.http.routers.mcp.entrypoints=websecure"
+      - "traefik.http.services.mcp.loadbalancer.server.port=3001"
+
   frontend:
     depends_on:
       - api
