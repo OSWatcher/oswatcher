@@ -46,8 +46,6 @@ services:
       - neo4j_data:/data
       - db_seed_cache:/seed
       - ./scripts/db-seed.sh:/db-seed.sh:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   minio:
     image: minio/minio:${MINIO_VERSION}
