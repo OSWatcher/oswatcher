@@ -71,6 +71,9 @@ straight after cloning. Key variables:
 - `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` : local defaults committed; the production overlay
   rejects the default password
 - `NEO4J_HEAP_*`, `NEO4J_PAGECACHE_SIZE` : small local values; size for the corpus on a server
+- `SEED_DB` / `SEED_DB_URL` / `SEED_DB_VERSION` : on first boot, `db-seed` downloads the dump at
+  `SEED_DB_URL` and loads it before Neo4j starts. `SEED_DB=false` (or an empty URL) starts empty.
+  Bump `SEED_DB_VERSION` to re-seed from a refreshed dump.
 
 ## Important notes
 
@@ -80,6 +83,11 @@ straight after cloning. Key variables:
   `../oswatcher-procedures` (`procedure-builder`); prod pulls
   `ghcr.io/oswatcher/oswatcher-procedures:latest` (`procedure-init`). Either way the JAR lands in
   the `procedure_plugin` volume and Neo4j waits for the init container before starting.
+- **Database seeding** is handled by `db-seed` (`scripts/db-seed.sh`), which Neo4j also waits
+  for. It downloads `SEED_DB_URL` into the `db_seed_cache` volume with `wget -c` and runs
+  `neo4j-admin database load`. A `.oswatcher-seed-version` marker on `neo4j_data` records what was
+  loaded, so it is a no-op on later boots until `SEED_DB_VERSION` changes, and it refuses to
+  overwrite a database it did not seed itself.
 - **Frontend API URI** is baked as a placeholder and substituted at container start, so no
   rebuild is needed to retarget a deployment. Dev points it at `http://localhost:4000`; prod at
   `<HTTP_SCHEME>://api.<DOMAIN>`.
@@ -93,7 +101,7 @@ straight after cloning. Key variables:
 | `README.md` | Project overview, quickstart, repository map |
 | `docs/architecture.md` | Pipeline and service diagram, compose layout |
 | `docs/development.md` | Building the stack from sibling checkouts |
-| `docs/building-a-corpus.md` | Filling the empty graph with `osw-builder` |
+| `docs/building-a-corpus.md` | The default seeded corpus, and building your own with `osw-builder` |
 | `docs/deployment.md` | Server setup, updates, rollback, troubleshooting |
 
 ## Related repositories

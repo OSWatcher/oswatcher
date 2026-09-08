@@ -42,13 +42,16 @@ Check the API is alive:
 curl -s -X POST http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ branches { name } }"}'
-# {"data":{"branches":[]}}
+# {"data":{"branches":[{"name":"win95"},{"name":"winxp-sp3"},{"name":"ubuntu-6.10"}, ...]}}
 ```
 
-An empty `branches` list is the correct answer on a fresh install. **The graph starts empty by
-design**, not because a download is missing: you rebuild OS history yourself from installation
-media with [osw-builder](https://github.com/OSWatcher/osw-builder), one release at a time. See
-[docs/building-a-corpus.md](docs/building-a-corpus.md).
+On the first `up -d` the stack downloads a **ready-to-use corpus** (a Neo4j dump, ~2.4 GB) and
+loads it before the database starts, so the graph is queryable straight away. This happens once;
+the data then lives in the `neo4j_data` volume and later starts are instant.
+
+To start from an **empty graph** instead and build OS history yourself from installation media
+with [osw-builder](https://github.com/OSWatcher/osw-builder), set `SEED_DB=false` in
+[`.env`](.env) before the first `up -d`. See [docs/building-a-corpus.md](docs/building-a-corpus.md).
 
 Stop the stack and keep its data:
 

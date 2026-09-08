@@ -38,11 +38,13 @@ selection for development.
 curl -s -X POST http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ branches { name } }"}'
-# {"data":{"branches":[]}}
+# {"data":{"branches":[{"name":"win95"},{"name":"winxp-sp3"}, ...]}}
 ```
 
-An empty `branches` list is correct on a fresh deployment. Fill the graph with
-[osw-builder](https://github.com/OSWatcher/osw-builder); see [building-a-corpus.md](building-a-corpus.md).
+Dev mode seeds the ready-to-use corpus on first boot too, like the default stack. Set
+`SEED_DB=false` in [`.env`](../.env) to skip the ~2.4 GB download and work against an empty
+graph, then fill it with [osw-builder](https://github.com/OSWatcher/osw-builder); see
+[building-a-corpus.md](building-a-corpus.md).
 
 ## What dev mode changes
 

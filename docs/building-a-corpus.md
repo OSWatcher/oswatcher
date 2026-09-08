@@ -1,8 +1,11 @@
 # Building a corpus
 
-A fresh deployment starts with an empty graph. There is deliberately no corpus to download:
-[osw-builder](https://github.com/OSWatcher/osw-builder) ships the recipes to rebuild OS history
-yourself from installation media and commit each release into the graph.
+By default the stack downloads a ready-to-use corpus on first boot (see the
+[quickstart](../README.md#quickstart)). Set `SEED_DB=false` in [`.env`](../.env) before the
+first `up -d` to start from an empty graph instead, then build OS history yourself:
+[osw-builder](https://github.com/OSWatcher/osw-builder) ships the recipes to rebuild each release
+from installation media and commit it into the graph. You can also point osw-builder at a
+seeded graph to extend it with your own captures.
 
 ```bash
 osw-builder capture_os win10-22h2-19045.2006
