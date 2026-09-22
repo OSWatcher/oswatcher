@@ -14,9 +14,6 @@ direction and hang your own extracted data off it.
 Ask it which release first shipped a binary, every image that ever contained a given DLL, or how
 a registry subtree drifted across a decade of service packs.
 
-<sub><b>Not the Oracle tool.</b> OSWatcher Black Box (<code>oswbb</code>), Oracle's database metrics
-collector, is an unrelated project. This is offline image analysis, not runtime monitoring.</sub>
-
 ## Quickstart
 
 ```bash
