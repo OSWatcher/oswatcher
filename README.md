@@ -113,13 +113,6 @@ part of the current toolchain.
 | [docs/building-a-corpus.md](docs/building-a-corpus.md) | Filling the graph with osw-builder |
 | [docs/deployment.md](docs/deployment.md) | Running on a server: domain, TLS, backups, rollback |
 
-## Status
-
-Developed since 2016, open-sourced in 2026. Actively developed but **solo-maintained**, so APIs
-may change between releases and response times vary. Some security controls (blob-download
-authentication, registry redaction) ship disabled in the open-source configuration: review
-[docs/deployment.md](docs/deployment.md) before exposing an instance publicly.
-
 ## Contributing and security
 
 Issues and questions are welcome here for anything cross-cutting, or on the specific repository
