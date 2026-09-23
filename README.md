@@ -87,12 +87,12 @@ flowchart LR
 
     neogit --> builder
     plugins --> builder
-    builder --> graph[(Neo4j graph)]
-    dump([published corpus dump]) --> graph
+    builder --> neo4j[(Neo4j graph)]
+    dump([published corpus dump]) --> neo4j
 
     subgraph deploy ["this repository: docker compose up -d"]
-        procedures[oswatcher-procedures] --> graph
-        graph --> api[graphql-api]
+        procedures[oswatcher-procedures] --> neo4j
+        neo4j --> api[graphql-api]
         api --> frontend
     end
 ```
