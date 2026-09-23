@@ -5,11 +5,11 @@
 
 > A queryable graph of how operating systems change, release over release.
 
-OSWatcher captures the filesystem and registry of historical OS releases (Windows 95 to 11,
-Ubuntu 6.10 to 25.04) offline and stores each one as a content-addressed Merkle graph in Neo4j,
-with file contents in S3-compatible object storage. Think of it as git for golden images:
-the object graph lives in a database instead of a packfile, so you can walk OS history in any
-direction and hang your own extracted data off it.
+OSWatcher captures the filesystem and registry of historical OS releases (Windows 95-11,
+Ubuntu 6.10-25.04) offline and stores each one as a content-addressed Merkle graph in Neo4j,
+with file contents in S3-compatible object storage. It's git for golden images, but the object
+graph lives in a database instead of a packfile: query OS history in any direction, attach your
+own extracted data to it.
 
 Ask it which release first shipped a binary, every image that ever contained a given DLL, or how
 a registry subtree drifted across a decade of service packs.
@@ -22,9 +22,8 @@ cd oswatcher
 docker compose up -d
 ```
 
-That is the whole setup. The repository ships local defaults, so there is nothing to configure,
-no passwords to set and no domain to register. Give the services a minute to come up, then open
-<http://localhost>.
+That's the whole setup: local defaults ship in the repo, nothing to configure, no passwords, no
+domain. Give the services a minute, then open <http://localhost>.
 
 | Service | URL |
 |---------|-----|
@@ -42,13 +41,13 @@ curl -s -X POST http://localhost:4000/graphql \
 # {"data":{"branches":[{"name":"win95"},{"name":"winxp-sp3"},{"name":"ubuntu-6.10"}, ...]}}
 ```
 
-On the first `up -d` the stack downloads a ready-to-use corpus (a Neo4j dump, ~2.4 GB) and
-loads it before the database starts, so the graph is queryable straight away. This happens once;
-the data then lives in the `neo4j_data` volume and later starts are instant.
+On the first `up -d`, the stack downloads a ready-to-use corpus (a Neo4j dump, ~2.4 GB) and
+loads it before the database starts: the graph is queryable immediately. This runs once; the
+data then lives in the `neo4j_data` volume, and later starts are instant.
 
-To start from an empty graph instead and build OS history yourself from installation media
-with [osw-builder](https://github.com/OSWatcher/osw-builder), set `SEED_DB=false` in
-[`.env`](.env) before the first `up -d`. See [docs/building-a-corpus.md](docs/building-a-corpus.md).
+To start empty and build the corpus yourself from installation media with
+[osw-builder](https://github.com/OSWatcher/osw-builder), set `SEED_DB=false` in [`.env`](.env)
+before the first `up -d`. See [docs/building-a-corpus.md](docs/building-a-corpus.md).
 
 Stop the stack and keep its data:
 
@@ -61,18 +60,19 @@ docker compose down
 
 ## What you can ask it
 
-Git content-addresses snapshots too, but its object graph is forward-only: a commit points at its
-files and never the reverse. Putting the same objects in a graph database makes it possible to
-answer questions in a single traversal that git's format can't: how one file, symbol, struct or
-registry value evolved across an OS's entire release history; given one artifact, every image
-that ever contained it; or corpus-wide aggregates, such as which characteristics stay most stable
-across a decade of releases.
+Git content-addresses snapshots too, but its object graph is forward-only: a commit points at
+its files, never the reverse. A graph database inverts that. Queries git can't answer in a
+single traversal:
+
+- How one file, symbol, struct, or registry value changed across an OS's entire release history
+- Every image that ever contained a given artifact
+- Corpus-wide aggregates: which characteristics stay stable across a decade of releases
 
 ## The repositories
 
-This repository is the entry point and runs the stack. `neogit` and `oswatcher-plugins` build the
-graph as OS images are captured; `osw-builder` drives that capture; `graphql-api` and `frontend`
-serve the result. `oswatcher-procedures` is a Neo4j plugin loaded directly into the database.
+This repository is the entry point and runs the stack. `osw-builder` drives OS capture; `neogit`
+and `oswatcher-plugins` build the graph from it; `graphql-api` and `frontend` serve the result.
+`oswatcher-procedures` is a Neo4j plugin loaded directly into the database.
 
 ```mermaid
 flowchart LR
@@ -123,8 +123,8 @@ flowchart LR
 Three archived datasets ([windows-desktop](https://github.com/OSWatcher/windows-desktop),
 [ubuntu-server](https://github.com/OSWatcher/ubuntu-server),
 [osw-fs-windows](https://github.com/OSWatcher/osw-fs-windows)) hold captures from the original
-2016 to 2020 OSWatcher, which committed filesystems straight into git. They are frozen and not
-part of the current toolchain.
+2016-2020 OSWatcher, which committed filesystems straight into git. Frozen, not part of the
+current toolchain.
 
 ## Documentation
 
@@ -137,9 +137,9 @@ part of the current toolchain.
 
 ## Contributing and security
 
-Issues and questions are welcome here for anything cross-cutting, or on the specific repository
-for anything scoped to it. See
-[CONTRIBUTING](https://github.com/OSWatcher/.github/blob/main/CONTRIBUTING.md) and, for
+File issues and questions here for anything cross-cutting, or on the specific repository for
+anything scoped to it. See
+[CONTRIBUTING](https://github.com/OSWatcher/.github/blob/main/CONTRIBUTING.md); for
 vulnerability reports, [SECURITY](https://github.com/OSWatcher/.github/blob/main/SECURITY.md).
 
 The original single-repo framework (2016 to 2021) is preserved in this repository's history at
