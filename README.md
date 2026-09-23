@@ -26,13 +26,6 @@ The questions it was built for are set questions over OS history, not diffs betw
   releases, and which are always moving?
 - Which releases share this exact file, and where does its history fork?
 
-Diffing two recent builds is well served today ([Winbindex](https://winbindex.m417z.com),
-[windiff](https://github.com/ergrelet/windiff), [Vergilius](https://www.vergiliusproject.com)),
-and LLM-assisted tooling has made patch diffing and reverse engineering far cheaper than when
-this project started. What OSWatcher still has is the captured data itself, including old builds
-that are hard to reproduce now (the Windows Update servers for 2000, XP and Vista shut down in
-2019, and many old ISOs no longer have an official download).
-
 What the public corpus holds:
 
 | Layer | Coverage |
