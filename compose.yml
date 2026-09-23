@@ -48,7 +48,8 @@ services:
       - ./scripts/db-seed.sh:/db-seed.sh:ro
 
   minio:
-    image: minio/minio:${MINIO_VERSION}
+    # Docker Hub no longer serves minio/* anonymously; quay.io is MinIO's official mirror.
+    image: quay.io/minio/minio:${MINIO_VERSION}
     ports:
       - "${BIND_ADDRESS:-0.0.0.0}:9000:9000" # S3 API
       - "${BIND_ADDRESS:-0.0.0.0}:9001:9001" # Web console
@@ -70,7 +71,7 @@ services:
       retries: 3
 
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     depends_on:
       minio:
         condition: service_healthy
