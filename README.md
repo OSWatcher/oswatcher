@@ -6,6 +6,8 @@
 > 70 installed OS releases, from Windows 95 to Windows 11 25H2 and Ubuntu 6.10 to 25.04,
 > captured and diffable in one graph. One command to run it locally.
 
+![OSWatcher demo: docker compose up on an empty Docker cache, then diffing Windows 11 24H2 against 25H2, downloading a new DLL through Winbindex, and querying _EPROCESS.Token offsets over GraphQL](docs/assets/demo.gif)
+
 OSWatcher installs historical OS releases in VMs, captures the installed filesystem, registry and
 debug symbols offline, and stores every state as a content-addressed Merkle graph in Neo4j. Think
 git for golden images, but the object graph lives in a database, so you can query history in any
