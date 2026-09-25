@@ -46,6 +46,7 @@ OSWatcher is a pipeline. An OS image goes in at one end; a queryable graph comes
 | **API** | `ghcr.io/oswatcher/graphql-api` | GraphQL API over the graph |
 | **Traefik** | `traefik` | Reverse proxy and TLS termination |
 | **Frontend** | `ghcr.io/oswatcher/frontend` | Vue 3 web UI (published image in production, sibling checkout in development) |
+| **MCP server** | *(no published image yet, builds from a sibling `graphql-api` checkout, `mcp/Dockerfile`)* | Model Context Protocol server over the graph, port 3001, Traefik-routed at `mcp.localhost`. Dev-only: requires the sibling checkout since no image is published yet |
 
 ## Compose file layout
 
