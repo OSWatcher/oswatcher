@@ -48,8 +48,9 @@ services:
       - ./scripts/db-seed.sh:/db-seed.sh:ro
 
   minio:
-    # Docker Hub no longer serves minio/* anonymously; quay.io is MinIO's official mirror.
-    image: quay.io/minio/minio:${MINIO_VERSION}
+    # Neither Docker Hub (minio/*) nor quay.io serves MinIO images anonymously anymore.
+    # pgsty/* is a community-maintained fork on Docker Hub that pulls without login.
+    image: pgsty/minio:${MINIO_VERSION}
     ports:
       - "${BIND_ADDRESS:-0.0.0.0}:9000:9000" # S3 API
       - "${BIND_ADDRESS:-0.0.0.0}:9001:9001" # Web console
@@ -71,7 +72,7 @@ services:
       retries: 3
 
   minio-init:
-    image: quay.io/minio/mc:latest
+    image: pgsty/mc:${MC_VERSION}
     depends_on:
       minio:
         condition: service_healthy
